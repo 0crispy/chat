@@ -5,10 +5,16 @@
   <img src="https://cdn.shopify.com/s/files/1/0221/7106/products/Lotus_Rose_1024x1024.jpg?v=1582661928" height="100">
   <h2>prisijunkite</h2>
   <p>
-    <form action="/login" method="post">
+    <form action="/login" method="post" onsubmit="hashPassword()">
       <p>vardas:<input type = "text" name="name"></p>
-      <p>slaptažodis:<input type="password" name="password"></p>
+      <p>slaptažodis:<input type="password" id = "passwordInput"></p>
+      <input type="hidden" name="hashedPassword" id="hashedPassword">
       <button>prisijungti</button>
     </form>
+    
   </p>
   <a href="/register">neturiu paskyros</a>
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.0.0/crypto-js.min.js"></script>
+<script src="script.js"></script>
