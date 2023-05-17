@@ -5,14 +5,14 @@
 
 <h2>sukurk paskyrą</h2>
 <p>
-    <form action="/register" method="post" onsubmit="hashPassword()">
-    <p>vardas:<input type = "text" name="name"></p>
+    <form action="/room" method="post" id="registerForm">
+    <p>vardas:<input type = "text" name="name" id="name"></p>
     <p>slaptažodis:<input type="password" id = "passwordInput"></p>
-    <input type="hidden" name="hashedPassword" id="hashedPassword">
     <p><small>rodyti slaptažodį<input type="checkbox" onclick="showPassword()" autocomplete="off"></small></p>
 
-    <button>prisiregistruoti</button>
+    <input type="submit" value="prisiregistruoti">
     </form>
+    <p style="color:red" id="usernameError"></p>
 </p>
 
 <a href="/">jau turi paskyrą?</a>
@@ -28,4 +28,31 @@
             x.type = "password";
         }
     }
+    document.getElementById("registerForm").addEventListener("submit", function(event) {
+        event.preventDefault(); // Prevent form submission
+
+        // Get the entered username
+        var username = document.getElementById("name").value;
+        var password = hashPassword(document.getElementById("passwordInput").value);
+
+        // Send an AJAX request to the server to check if the username exists
+        fetch("/tryRegister", {
+            method: "POST",
+            headers: {
+            "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ username: username, password:password})
+        })
+            .then(response => response.json())
+            .then(data =>{
+            if (data.message == "taken") {
+                // Display the error message
+                document.getElementById("usernameError").textContent = "šis vardas jau egzistuoja";
+            } else {
+                // Clear the error message and submit the form
+                document.getElementById("usernameError").textContent = "";
+                this.submit();
+            }
+            });
+        });
 </script>

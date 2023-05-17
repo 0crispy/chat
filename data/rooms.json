@@ -1,0 +1,40 @@
+{
+    "rooms": [
+        {
+            "name": "kambarys",
+            "password":"",
+            "creator":"admin",
+            "messages":[
+                {
+                    "author":"admin",
+                    "time":"2023-05-17 14:01:54.891724585 UTC",
+                    "message":"sveikuciai"    
+                }
+            ]
+        },
+        {
+            "name": "kambarys2",
+            "password":"a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
+            "creator":"admin",
+            "messages":[
+                {
+                    "author":"admin",
+                    "time":"2023-05-17 14:01:54.891724585 UTC",
+                    "message":"sveikuciai"    
+                }
+            ]
+        },
+        {
+            "name": "hi",
+            "password":"",
+            "creator":"admin",
+            "messages":[
+                {
+                    "author":"admin",
+                    "time":"2023-05-17 14:01:54.891724585 UTC",
+                    "message":"sveikuciai"    
+                }
+            ]
+        }
+    ]
+}

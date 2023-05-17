@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<html lang="lt">
+<body onload="prepare()">
+    <!-- <p>prisijungęs <i style="color:green">(admin)</i></p> -->
+    <div style="float:left;width:250px">
+        <h2>prisijunk prie kambario:</h2>
+        <div style="
+            display: flex;
+            justify-content: flex-end;
+            flex-direction: column;
+            width:200px;"
+        >
+            <select id="rooms" onchange="selectRoom()">
+
+            </select>
+        </div>            
+        <p hidden id="joinRoomPasswordField">
+            slaptažodis:
+            <input type = "password" id="joinRoomPassword">
+        </p>        
+        <p style="color:red" id="joinError"></p>
+        <form action="/chat" method="post" id="joinForm">
+            <button>prisijungti</button>
+        </form>
+    </div>
+    <div style="float:left">
+        <h2>sukurk kambarį:</h2>
+        <form>
+            <p>kambario pavadinimas:<input type = "text" name="createRoomName" id="createRoomName"></p>
+            <p>kambario slaptažodis:<input type = "text" name="createRoomPassword" id="createRoomPassword" autocomplete="off" disabled></p>
+            <p><small>reikia slaptažodžio?<input type="checkbox" onclick="needPassword()" autocomplete="off"></small></p>
+            <button>sukurti naują kambarį</button>
+        </form>
+    </div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.0.0/crypto-js.min.js"></script>
+<script src="script.js"></script>
+<script>
+    function prepare(){
+        refreshRooms();
+    }
+    function refreshRooms(){
+        var rooms = document.getElementById("rooms");
+        rooms.replaceChildren();
+        fetch("/getRooms", {
+            method: "POST",
+            headers: {
+            "Content-Type": "application/json"
+            }
+        })
+            .then(response => response.json())
+            .then(data =>{
+                for (el of data.rooms){
+                    var option = document.createElement("option");
+                    option.innerText = el.name;
+                    if (el.requires_password){
+                        option.dataset.requiresPassword = true; 
+                    }    
+                    else{
+                        option.style = "color:blue";
+                        option.dataset.requiresPassword = false; 
+                    }
+                    rooms.appendChild(option);
+                }
+            });
+    }
+    function selectRoom(){
+        var rooms = document.getElementById("rooms");
+        var room = rooms.children[rooms.selectedIndex];
+        if (room.dataset.requiresPassword == "true"){
+            var password = document.getElementById("joinRoomPasswordField");
+            password.hidden = false;
+        }
+        else{
+            var password = document.getElementById("joinRoomPasswordField");
+            password.hidden = true;
+        }
+    }
+    document.getElementById("joinForm").addEventListener("submit", function(event) {
+        event.preventDefault();
+        var rooms = document.getElementById("rooms");
+        var room = rooms.children[rooms.selectedIndex];
+        var password = ""
+        if (room.dataset.requiresPassword == "true"){
+            password = hashPassword(document.getElementById("joinRoomPassword").value);
+        }
+        fetch("/joinRoom", {
+            method: "POST",
+            headers: {
+            "Content-Type": "application/json"
+            },
+            body: JSON.stringify({name:room.innerHTML,password:password})
+        })
+        .then(response => response.json())
+        .then(data =>{
+            if (data.message == "unexpected"){
+                document.getElementById("joinError").textContent = "nežinoma klaida! perkraukite naršyklę";
+            }
+            else if (data.message == "wrong_password"){
+                document.getElementById("joinError").textContent = "neteisingas slaptažodis!";
+                document.getElementById("joinRoomPassword").value = "";
+            }
+            else{
+                document.getElementById("joinError").textContent = "";
+                this.submit();
+            }
+        });
+    })
+    function needPassword(){
+        var x = document.getElementById("createRoomPassword");
+        x.disabled = !x.disabled;
+        if (x.disabled){
+            x.value = "";
+        }
+    }
+</script>

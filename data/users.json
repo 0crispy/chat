@@ -2,19 +2,7 @@
   "users": [
     {
       "username": "admin",
-      "password": "admin"
-    },
-    {
-      "username": "duxas",
-      "password": "2413fb3709b05939f04cf2e92f7d0897fc2596f9ad0b8a9ea855c7bfebaae892"
-    },
-    {
-      "username": "labas",
-      "password": "f0e4c2f76c58916ec258f246851bea091d14d4247a2fc3e18694461b1816e13b"
-    },
-    {
-      "username": "Kristupas",
-      "password": "778b909672ea5b1da19ffed6343e520debb31b20f245bc977638e21480a259af"
+      "password": "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3"
     }
   ]
 }
