@@ -6,7 +6,9 @@ use std::io::Write;
 use hyper::body::Buf;
 use hyper::service::{make_service_fn, service_fn};
 use hyper::{Body, Request, Response, Server, Method, StatusCode};
-use futures::{TryStreamExt as _, StreamExt, Stream};
+use futures::{TryStreamExt as _, StreamExt, Stream, SinkExt};
+use hyper_tungstenite::HyperWebsocket;
+use hyper_tungstenite::tungstenite::Message as ClientMessage;
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize,Serialize, Debug)]
@@ -39,8 +41,8 @@ impl Rooms{
 #[derive(Deserialize,Serialize,Debug)]
 struct Room{
     name:String,
-    password:String,
-    creator:String,
+    info:String,
+    id:String,
     messages:Vec<Message>,
 }
 #[derive(Deserialize,Serialize,Debug)]
@@ -49,8 +51,35 @@ struct Message{
     time:String,
     message:String,
 }
+async fn serve_websocket(websocket: HyperWebsocket) -> Result<(), hyper_tungstenite::tungstenite::Error> {
+    let mut websocket = websocket.await?;
+    while let Some(message) = websocket.next().await {
+        match message?{
+            ClientMessage::Text(text) => {
+                println!("{}" ,text);
+                websocket.send(ClientMessage::Text("whats up".to_string())).await?;
+            },
+            _ =>{}
+        }
+    }
 
-async fn hello(req: Request<Body>) -> Result<Response<Body>, Infallible> {
+    Ok(())
+}
+async fn hello(mut req: Request<Body>) -> Result<Response<Body>, hyper_tungstenite::tungstenite::Error> {
+    if hyper_tungstenite::is_upgrade_request(&req) {
+        let (response, websocket) = hyper_tungstenite::upgrade(&mut req, None)?;
+
+        // Spawn a task to handle the websocket connection.
+        tokio::spawn(async move {
+            if let Err(e) = serve_websocket(websocket).await {
+                eprintln!("Error in websocket connection: {}", e);
+            }
+        });
+
+        // Return the response so the spawned future can continue.
+        Ok(response)
+    } else {
+
     let mut response = Response::new(Body::empty());
 
     match (req.method(), req.uri().path()) {
@@ -137,20 +166,20 @@ async fn hello(req: Request<Body>) -> Result<Response<Body>, Infallible> {
             #[derive(Serialize)]
             struct Room{
                 name:String,
-                requires_password:bool,
+                info:String,
+                id:String,
             }
             #[derive(Serialize)]
             struct OutputMessage{
                 rooms:Vec<Room>,
             }
-            let mut output_rooms = rooms.rooms.iter().map(|x|Room{name:x.name.clone(),requires_password:x.password!=""}).collect::<Vec<_>>();
-            output_rooms.sort_by(|a,b| (a.requires_password as i32).cmp(&(b.requires_password as i32)));
+            let output_rooms = rooms.rooms.iter().map(|x|Room{name:x.name.clone(),info:x.info.clone(),id:x.id.clone()}).collect::<Vec<_>>();
             *response.body_mut() = Body::from(serde_json::to_string(&OutputMessage{
                 rooms:output_rooms
             }).unwrap());
 
         },
-        (&Method::POST, "/joinRoom") => {
+        /*(&Method::POST, "/joinRoom") => {
             let body = hyper::body::to_bytes(req.into_body()).await.unwrap().iter()
                 .cloned()
                 .collect::<Vec<u8>>();
@@ -181,29 +210,25 @@ async fn hello(req: Request<Body>) -> Result<Response<Body>, Infallible> {
                 message:&'a str,
             }
             *response.body_mut() = Body::from(serde_json::to_string(&OutputMessage{message:output_message}).unwrap());
-        },
-        (&Method::GET, "/script.js") => {            
-            *response.body_mut() = Body::from(std::fs::read_to_string("script.js").unwrap());
-        },
-        (&Method::POST, "/room") => {
-            *response.body_mut() = Body::from(std::fs::read_to_string("room.html").unwrap());
-        },
-        (&Method::GET, "/room") => {
-            *response.body_mut() = Body::from(std::fs::read_to_string("room.html").unwrap());
-        },
+        },*/
         (&Method::POST, "/chat") => {
             *response.body_mut() = Body::from(std::fs::read_to_string("chat.html").unwrap());
         },
         (&Method::GET, "/favicon.ico") => {
             *response.body_mut() = Body::from(std::fs::read("favicon.ico").unwrap());
         },
-        _ => {
+        (&Method::GET, "/room") => {
+            let uri = req.uri().to_string();
+            let room_id = uri.strip_prefix("/room?id=").unwrap();
+            *response.body_mut() = Body::from(std::fs::read_to_string("room.html").unwrap());
+        },
+        (_,_path) => {
             *response.status_mut() = StatusCode::NOT_FOUND;
             *response.body_mut() = Body::from(std::fs::read_to_string("404.html").unwrap());
         },
     };
 
-    Ok(response)
+    Ok(response)}
 }
 
 #[tokio::main]

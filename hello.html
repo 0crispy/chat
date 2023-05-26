@@ -1,53 +1,52 @@
 <!DOCTYPE html>
 <meta charset="utf-8">
+
+<style>
+  table, td, th{
+    border:1px solid black;
+  }
+</style>
 <html lang="lt">
+<body onload="prepare()">
+
   <h1>Sveiki atvykę &lt;3 </h1>
   <img src="https://cdn.shopify.com/s/files/1/0221/7106/products/Lotus_Rose_1024x1024.jpg?v=1582661928" height="100">
-    <h2>prisijunkite</h2>
-    <p>
-    <form action="/room" method="post" id="registerForm">
-      <p>vardas:<input type = "text" name="name" id="name"></p>
-      <p>slaptažodis:<input type="password" id = "passwordInput"></p>
-      <button>prisijungti</button>
-    </form>
-    <p style="color:red" id="usernameError"></p>
-    
-  </p>
-  <a href="/register">neturiu paskyros</a>
+  <h2>prisijunk prie kambario:</h2>
+  <table>
+    <tr>
+      <th style="width:200px">Pavadinimas</th>
+      <th style="width:400px">Informacija</th>
+    </tr>
+    <tbody id="rooms">
 
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.0.0/crypto-js.min.js"></script>
-<script src="script.js"></script>
+    </tbody>
+  </table>
+  
 <script>
-  document.getElementById("registerForm").addEventListener("submit", function(event) {
-  event.preventDefault(); // Prevent form submission
-
-  // Get the entered username
-  var username = document.getElementById("name").value;
-  var password = hashPassword(document.getElementById("passwordInput").value);
-
-  // Send an AJAX request to the server to check if the username exists
-  fetch("/tryLogin", {
-      method: "POST",
-      headers: {
-      "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ username: username, password:password})
-  })
-      .then(response => response.json())
-      .then(data =>{
-      if (data.message == "wrong_password") {
-        document.getElementById("passwordInput").value = "";
-        document.getElementById("usernameError").textContent = "neteisingas slaptažodis!";
-      } 
-      else if (data.message == "no_user"){
-        document.getElementById("usernameError").textContent = "neegizstuoja tokia paskyra!";
-      }
-      else {
-          // Clear the error message and submit the form
-          document.getElementById("usernameError").textContent = "";
-          this.submit();
-      }
-      });
-  });
+  function prepare(){
+    refreshRooms();
+  }
+  function refreshRooms(){
+      var rooms = document.getElementById("rooms");
+      rooms.replaceChildren();
+      fetch("/getRooms", {
+          method: "POST",
+          headers: {
+          "Content-Type": "application/json"
+          }
+      })
+          .then(response => response.json())
+          .then(data =>{
+              for (el of data.rooms){
+                  var tr = document.createElement("tr");
+                  var room_name = document.createElement("td");
+                  room_name.innerHTML = '<a href="room?id=' + el.id +'">' + el.name + "</a>";
+                  var room_info = document.createElement("td");
+                  room_info.innerHTML = el.info;
+                  tr.appendChild(room_name);
+                  tr.appendChild(room_info);
+                  rooms.appendChild(tr);
+              }
+          });
+  }
 </script>
