@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<html lang="lt">
+<body>
+    <p>labas</p>
+    <p id="demo">window.location.href</p>
+    <div id="messages" style="border:2px solid black;">
+        <!-- messages go here -->
+    </div>
+    <form onsubmit="submitMessage();return false;">
+        <input id="message_input" type="text">
+        <input type="submit" hidden />
+    </form>
+<script>
+    var room_id = "ROOM_ID";
+    var msg_count = 0;
+    const socket = new WebSocket("ws:" + window.location.host);
+
+    function submitMessage(){
+        var msg_input = document.getElementById("message_input"); 
+        var msg_val = msg_input.value;
+
+        var msg = Object.create(null);
+        msg.id = room_id;
+        msg.author = "admin";
+        msg.msg = msg_val;
+        console.log(msg);
+        socket.send("msg:" + JSON.stringify(msg));
+        msg_input.value = "";
+    }
+
+    socket.onopen = () => {
+        console.log('WebSocket connection established.');
+        askForNewMessages();
+        window.setInterval(askForNewMessages, 1000);
+    };
+    socket.onmessage = (event) =>{
+        var prefix = String(event.data).split(":")[0];
+        var message_str = String(event.data).slice(prefix.length+1);
+
+        if (prefix == "new_message"){
+            var message = JSON.parse(message_str);
+            var msg = document.createElement("p");
+            msg.innerHTML = message.author + ": " + message.message;
+            document.getElementById("messages").appendChild(msg);
+            msg_count++;            
+        }
+    }
+
+    function askForNewMessages(){
+        var msg= Object.create(null);
+        msg.id = room_id;
+        msg.count = msg_count;
+        socket.send('pls:' + JSON.stringify(msg));
+    }
+</script>

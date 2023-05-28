@@ -1,0 +1,22 @@
+{
+    "name": "kambarys",
+    "info": "sw",
+    "id":"0",
+    "messages":[
+        {
+            "author":"admin",
+            "time":"2023-05-17 14:01:54.891724585 UTC",
+            "message":"sveikuciai"
+        },
+        {
+            "author":"zmogus",
+            "time":"2023-05-17 14:01:55.891724585 UTC",
+            "message":"as esu zmogus"
+        },
+        {
+            "author":"admin",
+            "time":"2023-05-17 14:01:56.891724585 UTC",
+            "message":"skauda galva"
+        }
+    ]
+}
