@@ -18,6 +18,7 @@
     <tr>
       <th style="width:200px">Pavadinimas</th>
       <th style="width:400px">Informacija</th>
+      <th style="width:100px">Žinučių sk.</th>
     </tr>
     <tbody id="rooms">
 
@@ -45,8 +46,11 @@
                   room_name.innerHTML = `<a href="room?id=${el.id}">${el.name}</a>`;
                   var room_info = document.createElement("td");
                   room_info.innerHTML = el.info;
+                  var room_msg_count = document.createElement("td");
+                  room_msg_count.innerHTML = el.msg_count;
                   tr.appendChild(room_name);
                   tr.appendChild(room_info);
+                  tr.appendChild(room_msg_count);
                   rooms.appendChild(tr);
               }
           });

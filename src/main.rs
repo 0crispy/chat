@@ -28,7 +28,7 @@ impl Message{
     fn new(author:&str,message:&str) -> Self{
         Self{
             author: author.to_string(),
-            time: chrono::Utc::now().to_string(),
+            time: chrono::Utc::now().naive_local().to_string(),
             message: message.to_string(),
         }
     }
@@ -78,12 +78,13 @@ async fn serve_websocket(websocket: HyperWebsocket) -> Result<(), hyper_tungsten
                         struct Pls{
                             id:String,
                             count:usize,
+                            first_time:bool,
                         }
                         let pls = serde_json::from_str::<Pls>(msg).unwrap();
                         //send messages
                         let messages = get_messages(pls.count,&pls.id);
                         for message in messages{
-                            let send_msg = ("new_message:".to_string() + &serde_json::to_string(&message).unwrap()).to_string();
+                            let send_msg = ("new_msg:".to_string() + &serde_json::to_string(&message).unwrap()).to_string();
                             websocket.send(ClientMessage::Text(send_msg)).await?;
                         }
                     },
@@ -145,12 +146,19 @@ async fn hello(mut req: Request<Body>) -> Result<Response<Body>, hyper_tungsteni
                 name:String,
                 info:String,
                 id:String,
+                msg_count:usize,
             }
             #[derive(Serialize)]
             struct OutputMessage{
                 rooms:Vec<BasicRoom>,
             }
-            let output_rooms = rooms.iter().map(|x|BasicRoom{name:x.name.clone(),info:x.info.clone(),id:x.id.clone()}).collect::<Vec<_>>();
+            let mut output_rooms = rooms.iter().map(|x|BasicRoom{
+                name:x.name.clone(),
+                info:x.info.clone(),
+                id:x.id.clone(),
+                msg_count: x.messages.len()
+            }).collect::<Vec<_>>();
+            output_rooms.sort_by(|x,y|y.msg_count.cmp(&x.msg_count));
             *response.body_mut() = Body::from(serde_json::to_string(&OutputMessage{
                 rooms:output_rooms
             }).unwrap());
