@@ -1,10 +1,21 @@
 <!DOCTYPE html>
 <meta charset="utf-8">
 <html lang="lt">
+<style>
+    div.messages{
+        border:2px solid black;
+        width: 600px;
+        height: 600px;
+        overflow-x: hidden;
+        overflow-y: auto;
+        padding: 20px;
+    }
+</style>
 <body>
-    <p>labas</p>
-    <p id="demo">window.location.href</p>
-    <div id="messages" style="border:2px solid black;">
+    <h3>Vartotojo vardas: 
+        <a contenteditable="true" style="width:100px" maxlength="10"><mark id="username">svečias</mark></a>
+    </h3>
+    <div id="messages" class="messages">
         <!-- messages go here -->
     </div>
     <form onsubmit="submitMessage();return false;">
@@ -22,7 +33,7 @@
 
         var msg = Object.create(null);
         msg.id = room_id;
-        msg.author = "admin";
+        msg.author = String(document.getElementById("username").innerHTML);
         msg.msg = msg_val;
         console.log(msg);
         socket.send("msg:" + JSON.stringify(msg));
@@ -33,6 +44,7 @@
         console.log('WebSocket connection established.');
         askForNewMessages();
         window.setInterval(askForNewMessages, 1000);
+        window.setInterval(update_dates, 1000);
     };
     socket.onmessage = (event) =>{
         var prefix = String(event.data).split(":")[0];
@@ -41,7 +53,20 @@
         if (prefix == "new_message"){
             var message = JSON.parse(message_str);
             var msg = document.createElement("p");
-            msg.innerHTML = message.author + ": " + message.message;
+            var date = new Date(message.time);
+            var pretty_date = prettyDate(new Date(),date);
+            msg.style = "border:1px solid black";
+            msg.innerHTML = `
+                <b>
+                    ${message.author}
+                </b>:
+                    ${message.message} 
+                <i style="color:green" data-time="${message.time}" class="msg_date">
+                    (${pretty_date})
+                </i>
+            `;
+            msg.className = "msg";
+            msg.scrollIntoView();
             document.getElementById("messages").appendChild(msg);
             msg_count++;            
         }
@@ -52,5 +77,22 @@
         msg.id = room_id;
         msg.count = msg_count;
         socket.send('pls:' + JSON.stringify(msg));
+    }
+    function prettyDate(date, startDate) {
+        var secs = Math.floor((date.getTime() - startDate.getTime()) / 1000);
+        if (secs < 60) return secs + " s ago";
+        if (secs < 3600) return Math.floor(secs / 60) + " m ago";
+        if (secs < 86400) return Math.floor(secs / 3600) + " h ago";
+        if (secs < 604800) return Math.floor(secs / 86400) + " days ago";
+        return date.toDateString();
+    }
+    function update_dates(){
+        var elements = document.getElementsByClassName("msg_date");
+        for (const el in elements){
+            console.log("hi");
+            var pretty_date = prettyDate(new Date(),new Date(el.dataset.time));
+            el.innerHTML = `(${pretty_date})`;
+        }
+
     }
 </script>

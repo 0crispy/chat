@@ -62,7 +62,7 @@ fn send_message(room_id:&str, author:&str, message:&str) -> Message{
 fn get_messages(start_index:usize, room_id:&str) -> Vec<Message> {
     let room = get_room(room_id).unwrap();
     let messages = room.messages.clone();
-    let len = (messages.len()-start_index).min(10);
+    let len = messages.len()-start_index;
     messages[start_index..(start_index + len)].to_vec()
 }
 async fn serve_websocket(websocket: HyperWebsocket) -> Result<(), hyper_tungstenite::tungstenite::Error> {
@@ -74,7 +74,6 @@ async fn serve_websocket(websocket: HyperWebsocket) -> Result<(), hyper_tungsten
                 let msg = text.strip_prefix(&(prefix.to_string() + ":")).unwrap();
                 match prefix{
                     "pls" => {
-                        println!("Shut up man");
                         #[derive(Deserialize)]
                         struct Pls{
                             id:String,
@@ -84,7 +83,6 @@ async fn serve_websocket(websocket: HyperWebsocket) -> Result<(), hyper_tungsten
                         //send messages
                         let messages = get_messages(pls.count,&pls.id);
                         for message in messages{
-                            println!("fuck {}", pls.id);
                             let send_msg = ("new_message:".to_string() + &serde_json::to_string(&message).unwrap()).to_string();
                             websocket.send(ClientMessage::Text(send_msg)).await?;
                         }
@@ -93,7 +91,7 @@ async fn serve_websocket(websocket: HyperWebsocket) -> Result<(), hyper_tungsten
                         #[derive(Deserialize)]
                         struct BasicMessage{
                             author:String,
-                            id:String,
+                            id:String,//room id
                             msg:String,
                         }
                         let basic_msg = serde_json::from_str::<BasicMessage>(msg).unwrap();
@@ -162,17 +160,27 @@ async fn hello(mut req: Request<Body>) -> Result<Response<Body>, hyper_tungsteni
             *response.body_mut() = Body::from(load_res("chat.html"));
         },
         (&Method::GET, "/favicon.ico") => {
-            *response.body_mut() = Body::from(load_res_raw("favicon.ico"));
+            *response.body_mut() = Body::from(load_res_raw("mushroom.ico"));
         },
         (&Method::GET, "/room") => {
             let uri = req.uri().to_string();
-            let room_id = uri.strip_prefix("/room?id=").unwrap();
-            if get_room(room_id).is_some(){
-                let mut body_str = load_res("room.html");
-                body_str = body_str.replace("ROOM_ID", room_id);
-                *response.body_mut() = Body::from(body_str);
+            let room_id = 
+                if let Some(id) = uri.strip_prefix("/room?id="){
+                    Some(id)
+                }
+                else{
+                    None
+                };
+            let mut is_ok = false;
+            if let Some(room_id) = room_id{
+                if get_room(room_id).is_some(){
+                    let mut body_str = load_res("room.html");
+                    body_str = body_str.replace("ROOM_ID", room_id);
+                    *response.body_mut() = Body::from(body_str);
+                    is_ok = true;
+                }
             }
-            else{
+            if !is_ok{
                 *response.body_mut() = Body::from(load_res("room_not_found.html"));
             }
         },

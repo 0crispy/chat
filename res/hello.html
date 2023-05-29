@@ -11,6 +11,8 @@
 
   <h1>Sveiki atvykę &lt;3 </h1>
   <img src="https://cdn.shopify.com/s/files/1/0221/7106/products/Lotus_Rose_1024x1024.jpg?v=1582661928" height="100">
+
+  
   <h2>prisijunk prie kambario:</h2>
   <table>
     <tr>
@@ -40,7 +42,7 @@
               for (el of data.rooms){
                   var tr = document.createElement("tr");
                   var room_name = document.createElement("td");
-                  room_name.innerHTML = '<a href="room?id=' + el.id +'">' + el.name + "</a>";
+                  room_name.innerHTML = `<a href="room?id=${el.id}">${el.name}</a>`;
                   var room_info = document.createElement("td");
                   room_info.innerHTML = el.info;
                   tr.appendChild(room_name);
