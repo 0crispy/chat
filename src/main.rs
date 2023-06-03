@@ -1,12 +1,33 @@
-use std::convert::Infallible;
-use hyper::service::{make_service_fn, service_fn};
-use hyper::{Body, Request, Response, Server, Method, StatusCode};
-use futures::{StreamExt, SinkExt, TryStreamExt};
-use hyper_tungstenite::{HyperWebsocket, WebSocketStream};
+use hyper::{Body, Request, Response, Method, StatusCode};
+use futures::{StreamExt, SinkExt};
+use hyper_tungstenite::{HyperWebsocket};
 use hyper_tungstenite::tungstenite::Message as ClientMessage;
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 
+#[derive(Deserialize,Serialize, Debug)]
+struct Users {
+    users:Vec<User>
+}
+impl Users{
+    fn load() -> Users{
+        serde_json::from_str(std::fs::read_to_string("data/users.json").unwrap().as_str()).unwrap()
+    }
+    fn save(&self){
+        std::fs::write("data/users.json", serde_json::to_string_pretty(&self).unwrap()).unwrap();
+    }
+    fn get_user(&self,username:&str) -> Option<&User>{
+        self.users.iter().find(|x|x.username==username)
+    }
+    fn add_user(&mut self, username:&str,password:&str){
+        self.users.push(User {username:username.to_string(),password:password.to_string() });
+    }
+
+}
+#[derive(Deserialize,Serialize,Debug)]
+struct User{
+    username:String,
+    password:String,
+}
 #[derive(Deserialize,Serialize, Debug)]
 struct Rooms {
     rooms:Vec<Room>
@@ -49,8 +70,30 @@ fn get_room(room_id:&str) -> Option<Room>{
         },
     }
 }
+fn get_room_by_name(room_name:&str) -> Option<Room>{
+    for file in std::fs::read_dir("data/rooms").unwrap() {
+        let room_path = file.unwrap().path();
+        let room_path_str = room_path.to_str().unwrap();
+        let room_str = std::fs::read_to_string(&room_path_str).unwrap();
+        let room = serde_json::from_str::<Room>(&room_str).unwrap();
+        if room.name == room_name{
+            return Some(room);
+        }
+    }
+    None
+}
 fn save_room(room:Room){
     std::fs::write(format!("data/rooms/{}.json",room.id),serde_json::to_string_pretty(&room).unwrap()).unwrap();
+}
+fn get_new_room_id() -> usize{
+    let mut id = 0;
+    for file in std::fs::read_dir("data/rooms").unwrap() {
+        let room_path = file.unwrap().path();
+        let room_path_str = room_path.to_str().unwrap();
+        let room_id = room_path_str.strip_prefix("data/rooms/").unwrap().strip_suffix(".json").unwrap().parse::<usize>().unwrap();
+        id = id.max(room_id);
+    }
+    id+1
 }
 fn send_message(room_id:&str, author:&str, message:&str) -> Message{
     let mut room = get_room(room_id).unwrap();
@@ -78,7 +121,6 @@ async fn serve_websocket(websocket: HyperWebsocket) -> Result<(), hyper_tungsten
                         struct Pls{
                             id:String,
                             count:usize,
-                            first_time:bool,
                         }
                         let pls = serde_json::from_str::<Pls>(msg).unwrap();
                         //send messages
@@ -92,13 +134,26 @@ async fn serve_websocket(websocket: HyperWebsocket) -> Result<(), hyper_tungsten
                         #[derive(Deserialize)]
                         struct BasicMessage{
                             author:String,
+                            password:String,
                             id:String,//room id
                             msg:String,
                         }
                         let basic_msg = serde_json::from_str::<BasicMessage>(msg).unwrap();
-                        let sent_msg = send_message(&basic_msg.id, &basic_msg.author, &basic_msg.msg);
-                        let send_msg = ("new_message:".to_string() + &serde_json::to_string(&sent_msg).unwrap()).to_string();
-                        websocket.send(ClientMessage::Text(send_msg)).await?;
+                        let users = Users::load();
+                        let mut ok = false;
+                        if let Some(user) = users.get_user(&basic_msg.author){
+                            if user.password == basic_msg.password{
+                                ok = true;
+                            }
+                        }
+                        if ok{
+                            let sent_msg = send_message(&basic_msg.id, &basic_msg.author, &basic_msg.msg);
+                            let send_msg = ("new_msg:".to_string() + &serde_json::to_string(&sent_msg).unwrap()).to_string();
+                            websocket.send(ClientMessage::Text(send_msg)).await?;
+                        }
+                        else{
+                            websocket.send(ClientMessage::Text("disconnect:true".to_string())).await?;
+                        }
                     },
                     _ => {}
                 }
@@ -128,6 +183,9 @@ async fn hello(mut req: Request<Body>) -> Result<Response<Body>, hyper_tungsteni
 
     match (req.method(), req.uri().path()) {
         (&Method::GET, "/") => {
+            *response.body_mut() = Body::from(load_res("login.html"));
+        },
+        (&Method::GET, "/home") => {
             *response.body_mut() = Body::from(load_res("hello.html"));
         },
         (&Method::POST, "/getRooms") => {
@@ -191,6 +249,97 @@ async fn hello(mut req: Request<Body>) -> Result<Response<Body>, hyper_tungsteni
             if !is_ok{
                 *response.body_mut() = Body::from(load_res("room_not_found.html"));
             }
+        },
+        (&Method::POST, "/login") => {
+            let body = hyper::body::to_bytes(req.into_body()).await.unwrap().iter()
+                .cloned()
+                .collect::<Vec<u8>>();
+            let body = String::from_utf8(body).unwrap();
+            let user = serde_json::from_str::<User>(body.as_str()).unwrap();
+            let users = Users::load();
+            #[derive(Serialize)]
+            struct OutputMessage{
+                ok:bool,
+                err:String,
+            }
+            let mut output = OutputMessage{ok:true,err:String::new()};
+            if let Some(current) = users.get_user(&user.username){
+                if current.password != user.password{
+                    output.ok = false;
+                    output.err = "wrong_password".to_string();
+                }
+            }
+            else{
+                output.ok = false;
+                output.err = "no_acc".to_string();
+            }
+            *response.body_mut() = Body::from(serde_json::to_string(&output).unwrap());
+        },
+        (&Method::POST, "/register") => {
+            let body = hyper::body::to_bytes(req.into_body()).await.unwrap().iter()
+                .cloned()
+                .collect::<Vec<u8>>();
+            let body = String::from_utf8(body).unwrap();
+            let user = serde_json::from_str::<User>(body.as_str()).unwrap();
+            let mut users = Users::load();
+            #[derive(Serialize)]
+            struct OutputMessage{
+                ok:bool,
+                err:String,
+            }
+            let mut output = OutputMessage{ok:true,err:String::new()};
+            if users.get_user(&user.username).is_some(){
+                output.ok = false;
+                output.err = "acc_exists".to_string();
+            }
+            else{
+                users.add_user(&user.username, &user.password);
+                users.save();
+            }
+            *response.body_mut() = Body::from(serde_json::to_string(&output).unwrap());
+        },
+        (&Method::POST, "/createRoom") => {
+            let body = hyper::body::to_bytes(req.into_body()).await.unwrap().iter()
+                .cloned()
+                .collect::<Vec<u8>>();
+            
+            #[derive(Deserialize)]
+            struct CreateRoom{
+                name:String,
+                info:String,
+            }
+            #[derive(Serialize)]
+            struct Output{
+                ok:bool,
+                id:String,
+            }
+            let body = String::from_utf8(body).unwrap();
+            let create_room = serde_json::from_str::<CreateRoom>(&body).unwrap();
+            if get_room_by_name(&create_room.name).is_none(){
+                let room_id =get_new_room_id().to_string(); 
+                let new_room = Room{
+                    name: create_room.name,
+                    info: create_room.info,
+                    id: room_id.clone(),
+                    messages: Vec::new(),
+                };
+                save_room(new_room);
+                *response.body_mut() = Body::from(serde_json::to_string(&Output{
+                    ok: true,
+                    id: room_id,
+                }).unwrap());
+            }
+            else{
+                *response.body_mut() = Body::from(serde_json::to_string(&Output{
+                    ok: false,
+                    id: String::new(),
+                }).unwrap());
+            }
+
+
+        },
+        (&Method::GET, "/register") => {
+            *response.body_mut() = Body::from(load_res("register.html"));
         },
         (_,_path) => {
             *response.status_mut() = StatusCode::NOT_FOUND;

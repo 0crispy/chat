@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+
+<style>
+  table, td, th{
+    border:1px solid black;
+  }
+</style>
+<html lang="lt">
+<body onload="prepare()">
+    <p>prisijunk:</p>
+    <form>
+        <input type="text" placeholder="vartotojo vardas" id="username">
+        <br>
+        <input type="password" placeholder="slaptažodis" id="password">
+        <br>
+        <button type="submit" onclick="login(event)">
+            prisijungti
+        </button>
+    </form>
+    <p style="color:rgb(255, 75, 75)" id="error"></p>
+    <a href="/register">neturiu paskyros</a>
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.0.0/crypto-js.min.js"></script>
+<script>
+
+    function prepare(){
+
+    }
+    function login(event){
+        event.preventDefault();
+
+        var usernameInput = document.getElementById("username");
+        var passwordInput = document.getElementById("password");
+        var hashedPassword = CryptoJS.SHA256(passwordInput.value).toString();
+
+        var sendData = {
+            username: usernameInput.value,
+            password: hashedPassword,
+        };
+
+        fetch("/login", {
+            method: "POST",
+            headers: {
+            "Content-Type": "application/json"
+            },
+            body: JSON.stringify(sendData)
+        })
+            .then(response => response.json())
+            .then(data =>{
+                if (data.ok){
+                    sessionStorage.setItem("username", usernameInput.value);                        
+                    sessionStorage.setItem("password", hashedPassword);    
+                    window.location = "/home";
+                }
+                else{
+                    var errorText = document.getElementById("error");
+                    if (data.err == "wrong_password"){
+                        errorText.innerHTML = "Neteisingas slaptažodis!";
+                        document.getElementById("password").value = "";
+                    }
+                    else if (data.err == "no_acc"){
+                        errorText.innerHTML = "Tokia paskyra neegzistuoja!";
+                    }
+                }
+            });
+    }
+</script>

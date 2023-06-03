@@ -8,6 +8,8 @@
 </style>
 <html lang="lt">
 <body onload="prepare()">
+  <a id="username">prisijungęs kaip: </a>
+  <button onclick="disconnect()">atsijungti</button>
 
   <h1>Sveiki atvykę &lt;3 </h1>
   <img src="https://cdn.shopify.com/s/files/1/0221/7106/products/Lotus_Rose_1024x1024.jpg?v=1582661928" height="100">
@@ -24,9 +26,21 @@
 
     </tbody>
   </table>
-  
+  <h2>sukurti kambarį:</h2>
+  <input type="text" placeholder="Kambario pavadinimas" id="createRoomName">
+  <br>
+  <input style="height:50px" type="text" placeholder="Informacija" id="createRoomInfo">
+  <br>
+  <button onclick="createRoom()">sukurti</button>
+  <p style="color:red" id="createRoomError"></p>
+
 <script>
   function prepare(){
+    var username = sessionStorage.getItem("username");
+    if (username == null){
+        window.location = "/";
+    }
+    document.getElementById("username").innerHTML = `prisijungęs kaip: ${username}`;
     refreshRooms();
   }
   function refreshRooms(){
@@ -55,4 +69,32 @@
               }
           });
   }
+    function disconnect(){
+        sessionStorage.clear();
+        window.location = "/";
+    }
+    function createRoom(){
+      var roomName = document.getElementById("createRoomName").value;
+      var roomInfo = document.getElementById("createRoomInfo").value;
+      var sendData = {
+          name:roomName,
+          info:roomInfo
+      };
+      fetch("/createRoom", {
+          method: "POST",
+          headers: {
+          "Content-Type": "application/json"
+          },
+          body:JSON.stringify(sendData)
+      })
+          .then(response => response.json())
+          .then(data =>{
+              if (data.ok){
+                window.location = "/room?id=" + data.id;
+              }
+              else{
+                document.getElementById("createRoomError").innerHTML = "Kambarys tokiu pavadinimu jau egzistuoja!";
+              }
+          });
+    }
 </script>

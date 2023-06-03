@@ -11,11 +11,11 @@
         padding: 20px;
     }
 </style>
-<body>
-    <a href="/">grįžti</a>
-    <h3>Vartotojo vardas: 
-        <input type="text" style="width:100px" id="username" value="svečias">
-    </h3>
+<body onload="prepare()">
+    <a href="/home">grįžti</a> <br>
+    <a id="username">prisijungęs kaip: </a>
+    <button onclick="disconnect()">atsijungti</button>
+
     <div id="messages" class="messages">
         <!-- messages go here -->
     </div>
@@ -27,14 +27,21 @@
     var room_id = "ROOM_ID";
     var msg_count = 0;
     const socket = new WebSocket("ws:" + window.location.host);
-
+    function prepare(){
+        var username = sessionStorage.getItem("username");
+        if (username == null){
+            window.location = "/";
+        }
+        document.getElementById("username").innerHTML = `prisijungęs kaip: ${username}`;
+    }
     function submitMessage(){
         var msg_input = document.getElementById("message_input"); 
         var msg_val = msg_input.value;
 
         var msg = Object.create(null);
         msg.id = room_id;
-        msg.author = String(document.getElementById("username").value);
+        msg.author = sessionStorage.username;
+        msg.password = sessionStorage.password;
         msg.msg = msg_val;
         socket.send("msg:" + JSON.stringify(msg));
         msg_input.value = "";
@@ -71,13 +78,15 @@
             document.getElementById("messages").appendChild(msg);
             msg_count++;
         }
+        else if (prefix == "disconnect"){
+            window.location = "/";
+        }
     }
 
     function askForNewMessages(first_time){
         var msg= Object.create(null);
         msg.id = room_id;
         msg.count = msg_count;
-        msg.first_time = first_time;
         socket.send('pls:' + JSON.stringify(msg));
     }
     function prettyDate(date) {
@@ -97,5 +106,9 @@
             }
         }
 
+    }
+    function disconnect(){
+        sessionStorage.clear();
+        window.location = "/";
     }
 </script>

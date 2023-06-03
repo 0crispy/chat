@@ -1,0 +1,20 @@
+{
+  "users": [
+    {
+      "username": "admin",
+      "password": "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918"
+    },
+    {
+      "username": "crispy",
+      "password": "127c2817bd9e778721d5ec9c5ab29ce6aa4a7d04aedf57a7b65ec361903c910b"
+    },
+    {
+      "username": "kristupas",
+      "password": "68c6c624e28a932ffe516ec58cd62acf5b6a72741be50a18bc37038344817f9e"
+    },
+    {
+      "username": "kristupas_",
+      "password": "2413fb3709b05939f04cf2e92f7d0897fc2596f9ad0b8a9ea855c7bfebaae892"
+    }
+  ]
+}

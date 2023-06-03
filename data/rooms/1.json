@@ -1,7 +1,22 @@
 {
   "name": "kitas kambarys",
-  "info": "labux as sukuriau sita kambary tam kad kalbetis apie labai rimtus reikalus",
+  "info": "kambarys skirtas kalbėtis rimtomis temomis",
   "id": "1",
   "messages": [
+    {
+      "author": "undefined",
+      "time": "2023-06-03 17:00:44.865050335",
+      "message": "hi"
+    },
+    {
+      "author": "undefined",
+      "time": "2023-06-03 17:00:50.994480996",
+      "message": "hi"
+    },
+    {
+      "author": "admin",
+      "time": "2023-06-03 17:07:46.128361019",
+      "message": "hi"
+    }
   ]
 }
